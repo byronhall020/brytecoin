@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Dispatch</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+</head>
+
+<body>
+    <input id="store" type="text" placeholder="Store"></input>
+    <br />
+    <input id="data" type="text" placeholder="Data"></input>
+    <br>
+    <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script>
+        function submitSomething() {
+            const wsUri = `ws://localhost:8999/generateEvent?store=${$("#store").val()}-${$("#data").val()}`
+            new WebSocket(wsUri);
+        }
+    </script>
+    <button type="button" onclick="submitSomething();">Submit</button>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Client</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+</head>
+
+<body>
+    <input type="text" id="store" placeholder="Store" />
+    <br />
+    <button onclick="setUpWebSocketClient()">setUpWebSocketClient</button>
+    <br />
+    <button type="button" onclick="manualClose();">Client Side Close Connection</button>
+    <div id="example">Empty</div>
+    <div id="messages">No Messages</div>
+    <script>
+        const store = document.getElementById("store");
+        const div = document.getElementById("example");
+        const messages = document.getElementById("messages");
+        let reconnectFrequencySeconds = 1;
+        let messageCount = 0;
+        const fibonacci = [1, 2, 3, 5, 8, 13, 21, 34, 55]
+        let fibindex = 0;
+        let websocket;
+        function isFunction(functionToCheck) {
+            return functionToCheck && {}.toString.call(functionToCheck) === '[object Function]';
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            let waitFunc;
+
+            return function () {
+                if (isFunction(wait)) {
+                    waitFunc = wait;
+                }
+                else {
+                    waitFunc = function () { return wait };
+                }
+
+                const context = this, args = arguments;
+                const later = function () {
+                    timeout = null;
+                    func.apply(context, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, waitFunc());
+            };
+        }
+
+        const reconnectFunc = debounce(function () {
+            setUpWebSocketClient();
+            //Randomize the retry
+            reconnectFrequencySeconds = fibonacci[fibindex];
+            console.log("Retry in", reconnectFrequencySeconds, "seconds");
+            fibindex++;
+            // Max out at ~1 minute as a compromise between user experience and server load
+            if (reconnectFrequencySeconds >= 55) {
+                reconnectFrequencySeconds = 60;
+                fibindex--;
+            }
+        }, function () { return reconnectFrequencySeconds * 1000 });
+        function manualClose() {
+            websocket.close();
+            div.innerHTML = '<p>Connection closed manually, won\'t be re-opened until page reload</p>';
+            if (messageCount % 5 === 0) {
+                messages.innerHTML = `<p>================================</p>`
+            } else {
+                messages.innerHTML += `<p>================================</p>`
+            }
+            messageCount++;
+        }
+        function setUpWebSocketClient() {
+            const wsUri = 'ws://localhost:8999/stream?store=' + store.value;
+            websocket = new WebSocket(wsUri);
+            websocket.onopen = function () {
+                console.log('websocket onOpen event');
+                div.innerHTML = '<p>Connection open ...</p>';
+                fibindex = 0;
+            };
+            websocket.onclose = function () {
+                console.log('websocket onClose event');
+                websocket.close();
+            };
+            websocket.onmessage = function (event) {
+                if (messageCount % 5 === 0) {
+                    messages.innerHTML = `<p>${event.data}</p>`;
+                } else {
+                    messages.innerHTML += `<p>${event.data}</p>`;
+                }
+                messageCount++;
+            };
+            websocket.onerror = function () {
+                console.log('websocket onerror event');
+                websocket.close();
+                reconnectFunc();
+            };
+        }
+    </script>
+</body>
+
+</html>
